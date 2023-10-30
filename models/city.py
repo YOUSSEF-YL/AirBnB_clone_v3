@@ -1,21 +1,44 @@
 #!/usr/bin/python3
-"""This is the city class"""
-from sqlalchemy.ext.declarative import declarative_base
-from models.base_model import BaseModel, Base
-from sqlalchemy import Column, Integer, String
+import models
+from models.base_model import BaseModel, Base, Table, Column, String
+from os import getenv
 from sqlalchemy import ForeignKey
-from sqlalchemy.orm import relationship
-from models.place import Place
+from sqlalchemy.orm import relationship, backref
+"""
+city module
+    contains
+        the City class inherts from BaseModel, Base
+"""
 
 
 class City(BaseModel, Base):
-    """This is the class for City
-    Attributes:
-        state_id: The state id
-        name: input name
     """
-    __tablename__ = "cities"
-    name = Column(String(128), nullable=False)
-    state_id = Column(String(60), ForeignKey('states.id'), nullable=False)
-    places = relationship("Place", cascade='all, delete, delete-orphan',
-                          backref="cities")
+    The City class
+    """
+    if getenv('HBNB_TYPE_STORAGE', 'fs') == 'db':
+        __tablename__ = 'cities'
+        state_id = Column(String(60), ForeignKey('states.id'), nullable=False)
+        name = Column(String(128), nullable=False)
+        places = relationship("Place", backref="city",
+                              cascade="all, delete, delete-orphan")
+        __mapper_args__ = {"confirm_deleted_rows": False}
+    else:
+        name = ""
+        state_id = ""
+
+    def __init__(self, *args, **kwargs):
+        """
+        Initializes from BaseModel
+        """
+        super().__init__(*args, **kwargs)
+
+    if getenv('HBNB_TYPE_STORAGE', 'fs') != 'db':
+        @property
+        def places(self):
+            """
+            returns all places in a City
+            """
+            all_places = models.storage.all("Place").values()
+            result = [place for place in all_places if
+                      place.city_id == self.id]
+            return result
